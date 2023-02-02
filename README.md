@@ -1,2 +1,3 @@
-# korge-kproject-template
-Template repository with a kproject module for korge
+# korge-video
+
+Support video playback on KorGE. Backport of KorVI
