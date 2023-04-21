@@ -1,24 +1,25 @@
-import com.soywiz.klock.*
-import com.soywiz.klock.hr.*
-import com.soywiz.korge.input.*
-import com.soywiz.korge.render.*
-import com.soywiz.korge.scene.*
-import com.soywiz.korge.view.*
-import com.soywiz.korim.bitmap.*
-import com.soywiz.korio.async.*
-import com.soywiz.korio.file.*
-import com.soywiz.korio.file.std.*
-import com.soywiz.korio.lang.*
-import com.soywiz.korio.util.*
-import com.soywiz.korvi.*
+import korlibs.time.*
+import korlibs.time.hr.*
+import korlibs.korge.input.*
+import korlibs.korge.render.*
+import korlibs.korge.scene.*
+import korlibs.korge.view.*
+import korlibs.image.bitmap.*
+import korlibs.io.async.*
+import korlibs.io.file.*
+import korlibs.io.file.std.*
+import korlibs.io.lang.*
+import korlibs.io.util.*
+import korlibs.memory.*
+import korlibs.video.*
 import kotlinx.coroutines.*
 
 class MainVideoScene : ScaledScene(1280, 720) {
     override suspend fun SContainer.sceneMain() {
         //addUpdaterOnce {
         val view = korviView(this@MainVideoScene, resourcesVfs["video.mp4"])
-        if (OS.isJs) {
-            val text = textOld("Click to start playing the video...")
+        if (Platform.isJs) {
+            val text = text("Click to start playing the video...")
             mouse.click.once {
                 text.removeFromParent()
                 view.play()
@@ -104,7 +105,7 @@ class MainVideoScene : ScaledScene(1280, 720) {
             }
             video.onVideoFrame {
                 //println("VIDEO FRAME! : ${it.position.timeSpan},  ${it.duration.timeSpan}")
-                if (OS.isJs || OS.isAndroid) {
+                if (Platform.isJs || Platform.isAndroid) {
                     //if (false) {
                     bitmap = it.data.slice()
                     //println(it.data)
@@ -118,7 +119,7 @@ class MainVideoScene : ScaledScene(1280, 720) {
 
                     if (!itData.ints.contentEquals(bmp.ints)) {
                         bmp.lock {
-                            com.soywiz.kmem.arraycopy(itData.ints, 0, bmp.ints, 0, bmp.area)
+                            arraycopy(itData.ints, 0, bmp.ints, 0, bmp.area)
                         }
                     }
                 }

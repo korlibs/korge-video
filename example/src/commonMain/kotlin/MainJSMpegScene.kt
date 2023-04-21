@@ -1,9 +1,9 @@
-import com.soywiz.korge.scene.*
-import com.soywiz.korge.view.*
-import com.soywiz.korim.bitmap.*
-import com.soywiz.korio.async.*
-import com.soywiz.korio.file.std.*
-import com.soywiz.korvi.mpeg.*
+import korlibs.korge.scene.*
+import korlibs.korge.view.*
+import korlibs.image.bitmap.*
+import korlibs.io.async.*
+import korlibs.io.file.std.*
+import korlibs.video.mpeg.*
 
 class MainJSMpegScene : Scene() {
     override suspend fun SContainer.sceneMain() {
