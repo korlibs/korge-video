@@ -1,6 +1,5 @@
 package korlibs.video
 
-import korlibs.time.hr.timeSpan
 import korlibs.time.minutes
 import korlibs.time.seconds
 import korlibs.image.awt.awtShowImageAndWait
@@ -12,7 +11,7 @@ object KorviJvm {
         runBlocking {
             //val video = KorviVideo(rootLocalVfs["C:/tmp/dw11222.mp4"].open())
             val video = DummyKorviVideoLL(3.minutes)
-            val duration = video.getDuration()!!.timeSpan
+            val duration = video.getDuration()!!
             println(duration)
             println((duration * 0.5).seconds)
             //container.seek((duration * 0.5))

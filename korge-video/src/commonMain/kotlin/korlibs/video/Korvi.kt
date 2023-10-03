@@ -3,9 +3,6 @@ package korlibs.video
 import korlibs.datastructure.Extra
 import korlibs.time.PerformanceCounter
 import korlibs.time.TimeSpan
-import korlibs.time.hr.HRTimeSpan
-import korlibs.time.hr.hr
-import korlibs.time.hr.timeSpan
 import korlibs.time.milliseconds
 import korlibs.time.nanoseconds
 import korlibs.audio.sound.AudioData
@@ -21,7 +18,7 @@ import korlibs.io.stream.AsyncStream
 import korlibs.math.geom.Matrix4
 import korlibs.math.geom.slice.*
 import korlibs.video.internal.korviInternal
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import kotlin.coroutines.coroutineContext
 import kotlin.native.concurrent.ThreadLocal
 
@@ -44,8 +41,8 @@ fun KorviVideoLL(stream: AsyncStream): KorviVideoLL = korviInternal.createContai
 open class KorviVideo : BaseKorviSeekable {
     class Frame(
         var coords: BitmapCoords,
-        val position: HRTimeSpan,
-        val duration: HRTimeSpan,
+        val position: TimeSpan,
+        val duration: TimeSpan,
     ) : Extra by Extra.Mixin() {
         @Deprecated("This doesn't have into account the transformed coordinates")
         val data get() = coords.base
@@ -53,16 +50,16 @@ open class KorviVideo : BaseKorviSeekable {
         companion object {
             operator fun invoke(
                 data: BitmapCoords,
-                position: HRTimeSpan,
-                duration: HRTimeSpan,
+                position: TimeSpan,
+                duration: TimeSpan,
                 transform: Matrix4
             ): Frame = Frame(data.transformed(transform), position, duration)
 
             // Soft deprecation of this
             operator fun invoke(
                 data: Bitmap,
-                position: HRTimeSpan,
-                duration: HRTimeSpan,
+                position: TimeSpan,
+                duration: TimeSpan,
                 transform: Matrix4 = data.transformMat
             ): Frame = Frame(data.slice(), position, duration, transform)
         }
@@ -71,26 +68,26 @@ open class KorviVideo : BaseKorviSeekable {
     val onVideoFrame = Signal<Frame>()
     val onComplete = Signal<Unit>()
     open val running: Boolean = false
-    open val elapsedTimeHr: HRTimeSpan get() = 0.milliseconds.hr
-    val elapsedTime: TimeSpan get() = elapsedTimeHr.timeSpan
+    open val elapsedTimeHr: TimeSpan get() = 0.milliseconds
+    val elapsedTime: TimeSpan get() = elapsedTimeHr
     open fun prepare(): Unit = Unit
     open fun render(): Unit = Unit
     override suspend fun getTotalFrames(): Long? = null
-    override suspend fun getDuration(): HRTimeSpan? = null
+    override suspend fun getDuration(): TimeSpan? = null
     open suspend fun play(): Unit = Unit
     open suspend fun pause(): Unit = Unit
-    override suspend fun seek(frame: Long): Unit = Unit
-    override suspend fun seek(time: HRTimeSpan): Unit = Unit
+    override suspend fun seekFrame(frame: Long): Unit = Unit
+    override suspend fun seek(time: TimeSpan): Unit = Unit
     open suspend fun stop(): Unit = Unit
     override suspend fun close(): Unit = Unit
 }
 
 open class KorviVideoFromLL(val ll: KorviVideoLL) : KorviVideo() {
     override suspend fun getTotalFrames(): Long? = ll.getTotalFrames()
-    override suspend fun getDuration(): HRTimeSpan? = ll.getDuration()
+    override suspend fun getDuration(): TimeSpan? = ll.getDuration()
 
-    override suspend fun seek(frame: Long) = ll.seek(frame)
-    override suspend fun seek(time: HRTimeSpan) = ll.seek(time)
+    override suspend fun seekFrame(frame: Long) = ll.seekFrame(frame)
+    override suspend fun seek(time: TimeSpan) = ll.seek(time)
 
     override suspend fun close() {
         stop()
@@ -113,7 +110,7 @@ open class KorviVideoFromLL(val ll: KorviVideoLL) : KorviVideo() {
     var audioStream: PlatformAudioOutput? = null
 
     override var running: Boolean = false
-    override var elapsedTimeHr: HRTimeSpan = 0.nanoseconds.hr
+    override var elapsedTimeHr: TimeSpan = 0.nanoseconds
 
     override suspend fun play() {
         if (videoJob != null || audioJob != null) return
@@ -145,7 +142,7 @@ open class KorviVideoFromLL(val ll: KorviVideoLL) : KorviVideo() {
                     if (frame != null) {
                         //println("FRAME: ${frame!!.frame} : ${frame!!.position.millisecondsInt}")
                         frames.add(frame!!)
-                        frames.sortBy { it.position.nanosecondsDouble }
+                        frames.sortBy { it.position.nanoseconds }
                     } else {
                         completed = true
                     }
@@ -158,7 +155,7 @@ open class KorviVideoFromLL(val ll: KorviVideoLL) : KorviVideo() {
                     val startTime = PerformanceCounter.reference
                     onVideoFrame(Frame(frame.data, frame.position, frame.duration))
                     val elapsedTime = PerformanceCounter.reference - startTime
-                    val time = (frame.duration.timeSpan - elapsedTime)
+                    val time = (frame.duration - elapsedTime)
                     delay(if (time < 1.milliseconds) 1.milliseconds else time)
                     /*
                     var lastFrame: KorviVideoFrame? = null
@@ -223,20 +220,20 @@ open class KorviVideoLL() : BaseKorviSeekable {
     open val audio: List<KorviAudioStream> = listOf()
     val streams: List<BaseKorviStream<out KorviFrame>> by lazy { video + audio }
     final override suspend fun getTotalFrames(): Long? = streams.mapNotNull { it.getTotalFrames() }.maxOrNull()
-    final override suspend fun getDuration(): HRTimeSpan? = streams.mapNotNull { it.getDuration() }.maxOrNull()
-    final override suspend fun seek(frame: Long) { for (v in streams) v.seek(frame) }
-    final override suspend fun seek(time: HRTimeSpan) { for (v in streams) v.seek(time) }
+    final override suspend fun getDuration(): TimeSpan? = streams.mapNotNull { it.getDuration() }.maxOrNull()
+    final override suspend fun seekFrame(frame: Long) { for (v in streams) v.seekFrame(frame) }
+    final override suspend fun seek(time: TimeSpan) { for (v in streams) v.seek(time) }
     override suspend fun close() = Unit
 }
 
 interface BaseKorviSeekable : AsyncCloseable {
     suspend fun getTotalFrames(): Long? = null
-    suspend fun getDuration(): HRTimeSpan? = null
-    suspend fun seek(frame: Long): Unit = TODO()
-    suspend fun seek(time: HRTimeSpan): Unit = TODO()
+    suspend fun getDuration(): TimeSpan? = null
+    suspend fun seekFrame(frame: Long): Unit = TODO()
+    suspend fun seek(time: TimeSpan): Unit = TODO()
     override suspend fun close() = Unit
 }
-suspend fun BaseKorviSeekable.seek(time: TimeSpan): Unit = seek(time.hr)
+suspend fun BaseKorviSeekable.seek(time: TimeSpan): Unit = seek(time)
 
 interface BaseKorviStream<T : KorviFrame> : BaseKorviSeekable {
     suspend fun readFrame(): T? = TODO()
@@ -247,11 +244,11 @@ typealias KorviAudioStream = BaseKorviStream<KorviAudioFrame>
 
 interface KorviFrame {
     val frame: Long
-    val position: HRTimeSpan
-    val duration: HRTimeSpan
-    val end: HRTimeSpan get() = position + duration
+    val position: TimeSpan
+    val duration: TimeSpan
+    val end: TimeSpan get() = position + duration
 }
-data class KorviAudioFrame(val data: AudioData, override val frame: Long, override val position: HRTimeSpan, override val duration: HRTimeSpan) : KorviFrame
-data class KorviVideoFrame(val dataGen: () -> Bitmap32, override val frame: Long, override val position: HRTimeSpan, override val duration: HRTimeSpan) : KorviFrame {
+data class KorviAudioFrame(val data: AudioData, override val frame: Long, override val position: TimeSpan, override val duration: TimeSpan) : KorviFrame
+data class KorviVideoFrame(val dataGen: () -> Bitmap32, override val frame: Long, override val position: TimeSpan, override val duration: TimeSpan) : KorviFrame {
     val data by lazy { dataGen() }
 }

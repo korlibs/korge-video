@@ -17,6 +17,7 @@ import korlibs.video.mpeg.stream.AudioDestination
 import korlibs.video.mpeg.stream.VideoDestination
 import korlibs.video.mpeg.stream.audio.MP2
 import korlibs.video.mpeg.stream.video.MPEG1
+import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
 
 class JSMpegPlayer(val coroutineContext: CoroutineContext) {
