@@ -1,9 +1,6 @@
 package korlibs.video.internal
 
 import korlibs.datastructure.TGenDeque
-import korlibs.time.hr.HRTimeSpan
-import korlibs.time.hr.hr
-import korlibs.time.seconds
 import korlibs.memory.arraycopy
 import korlibs.memory.readShortArrayLE
 import korlibs.memory.writeArrayLE
@@ -16,6 +13,7 @@ import korlibs.io.stream.SyncStream
 import korlibs.io.stream.readBytes
 import korlibs.io.stream.readBytesUpTo
 import korlibs.io.util.toByteArray
+import korlibs.time.*
 import korlibs.video.BaseKorviStream
 import korlibs.video.KorviAudioFrame
 import korlibs.video.KorviFrame
@@ -79,16 +77,16 @@ abstract class JvmBaseKorviStream<TFrame : KorviFrame>(
 ) : BaseKorviStream<TFrame> {
     internal val queue = KorviQueue<TFrame>()
 
-    override suspend fun seek(frame: Long) {
+    override suspend fun seekFrame(frame: Long) {
         (track as SeekableDemuxerTrack).gotoFrame(frame)
     }
 
-    override suspend fun seek(time: HRTimeSpan) {
-        (track as SeekableDemuxerTrack).seek(time.secondsDouble)
+    override suspend fun seek(time: TimeSpan) {
+        (track as SeekableDemuxerTrack).seek(time.seconds)
     }
 
     override suspend fun getTotalFrames(): Long? = track.meta.totalFrames.toLong()
-    override suspend fun getDuration(): HRTimeSpan? = track.meta.totalDuration.seconds.hr
+    override suspend fun getDuration(): TimeSpan? = track.meta.totalDuration.seconds
 
     override suspend fun readFrame(): TFrame? {
         prepareFrames()
@@ -111,7 +109,7 @@ class JvmKorviVideoStream(
         val frame = videoTrack.nextFrame() ?: return
         //println("FRAME: ${frame.frameNo}, ${frame.pts}, ${frame.timescale}, ${frame.duration}, ${frame.frameType}")
         val decodedFrame = adaptor.decodeFrame(frame, pic)
-        queue.enqueue(KorviVideoFrame({ decodedFrame.toBmp() }, frame.frameNo, frame.ptsD.seconds.hr, frame.durationD.seconds.hr))
+        queue.enqueue(KorviVideoFrame({ decodedFrame.toBmp() }, frame.frameNo, frame.ptsD.seconds, frame.durationD.seconds))
     }
 }
 
@@ -142,7 +140,7 @@ class JvmKorviAudioStream(
                 arraycopy(shorts, channel * sampleCount, array, 0, array.size)
             }
 
-            queue.enqueue(KorviAudioFrame(AudioData(audioBuffer.format.frameRate, audioSamples), frame.frameNo, frame.ptsD.seconds.hr, frame.durationD.seconds.hr))
+            queue.enqueue(KorviAudioFrame(AudioData(audioBuffer.format.frameRate, audioSamples), frame.frameNo, frame.ptsD.seconds, frame.durationD.seconds))
             //outs.write(shorts.toByteArrayLE())
         }
     }

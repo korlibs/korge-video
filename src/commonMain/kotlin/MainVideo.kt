@@ -1,5 +1,4 @@
 import korlibs.time.*
-import korlibs.time.hr.*
 import korlibs.korge.input.*
 import korlibs.korge.render.*
 import korlibs.korge.scene.*
@@ -11,6 +10,7 @@ import korlibs.io.file.std.*
 import korlibs.io.lang.*
 import korlibs.io.util.*
 import korlibs.memory.*
+import korlibs.platform.*
 import korlibs.video.*
 import kotlinx.coroutines.*
 
@@ -76,7 +76,7 @@ class MainVideoScene : ScaledScene(1280, 720) {
         }
 
         val elapsedTime: TimeSpan get() = video.elapsedTime
-        val elapsedTimeHr: HRTimeSpan get() = video.elapsedTimeHr
+        val elapsedTimeHr: TimeSpan get() = video.elapsedTimeHr
 
         fun play() {
             if (video.running) return
@@ -127,7 +127,7 @@ class MainVideoScene : ScaledScene(1280, 720) {
             video.onComplete {
                 coroutineScope.launchImmediately {
                     if (autoLoop) {
-                        seek(0L)
+                        seekFrame(0L)
                         video.play()
                     }
                 }
